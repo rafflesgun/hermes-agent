@@ -67,7 +67,7 @@ def build_requirements_environment(
     requirements: Sequence[str], *, out: Path, python: Path | None = None,
     cache: Path | None = None, env: Mapping[str, str] | None = None,
     wheelhouse: Path | None = None, offline: bool = False, sealed: bool = False,
-    explicit: bool = False,
+    explicit: bool = False, timeout: int = 1800,
 ) -> Path:
     """Create and check a fresh environment. Never mutate an existing destination.
 
@@ -91,7 +91,7 @@ def build_requirements_environment(
         offline=offline, explicit=explicit, output=sys.stderr,
     )
     with _fresh_build(environment, sealed=sealed):
-        environment.install_requirements(requirements, wheelhouse=wheelhouse)
+        environment.install_requirements(requirements, wheelhouse=wheelhouse, timeout=timeout)
     return environment.executable
 
 

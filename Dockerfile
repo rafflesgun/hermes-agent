@@ -285,8 +285,12 @@ RUN touch ./README.md
 # Do not leave the cache at its default: HERMES_HOME is not set yet in this
 # stage, so the default is /root/.hermes/cache/uv, which nothing reads. A plugin
 # install then runs with an empty cache and builds python-olm from source.
+# --timeout matches the bundle build's cold budget (pm.build_environment's 30
+# minutes is for interactive installs): this is a from-scratch sdist compile,
+# and a cross-arch build (arm64 on an amd64 host) runs it under CPU emulation,
+# where python-olm's libolm test suite alone outlasts the interactive default.
 RUN python3 -m pm.build_env --source /opt/hermes --python /usr/local/bin/python3 \
-    --cache /opt/hermes/uv-cache \
+    --cache /opt/hermes/uv-cache --timeout 7200 \
     --out /opt/hermes/.venv --no-install-project --sealed --record-selection \
     --extra all --extra messaging --extra otlp --extra anthropic --extra bedrock \
     --extra azure-identity --extra matrix --extra google-chat

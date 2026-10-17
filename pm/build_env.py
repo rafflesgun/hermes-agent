@@ -42,6 +42,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--out", type=Path)
     parser.add_argument("--python", type=Path)
     parser.add_argument("--cache", type=Path)
+    # A cold build compiles sdists and, under CPU emulation (a cross-arch image),
+    # runs an order of magnitude slower. The interactive default starves both.
+    parser.add_argument("--timeout", type=int, default=1800)
     parser.add_argument("--extra", dest="extras", action="append", default=[])
     parser.add_argument("--group", dest="groups", action="append", default=[])
     parser.add_argument("--all-extras", action="store_true")
@@ -121,13 +124,14 @@ def main(argv: Sequence[str] | None = None) -> int:
             executable = pm.build_requirements_environment(
                 requirements, out=args.out, python=args.python, cache=args.cache,
                 wheelhouse=args.wheelhouse, offline=args.offline, sealed=args.sealed, explicit=True,
+                timeout=args.timeout,
             )
         else:
             executable = pm.build_environment(
                 source=args.source, out=args.out, python=args.python, cache=args.cache,
                 extras=args.extras, groups=args.groups, all_extras=args.all_extras,
                 no_install_project=args.no_install_project, frozen=not args.resolve,
-                sealed=args.sealed, offline=args.offline, explicit=True,
+                sealed=args.sealed, offline=args.offline, explicit=True, timeout=args.timeout,
             )
             if args.record_selection:
                 _record_selection(args.source, args.extras)

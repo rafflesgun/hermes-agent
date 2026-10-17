@@ -256,6 +256,7 @@ python -m pm.build_env --source /work/source \
 | `--source`, `--out` | Required prepared source and fresh environment destination |
 | `--python` | Optional build interpreter; otherwise PM selects its pinned Python |
 | `--cache` | Optional build cache directory; otherwise PM selects its cache |
+| `--timeout` | Seconds allowed per build step (default 1800); cold sdist compiles and emulated cross-arch builds need more |
 | `--group` | Repeatable build/test dependency-group selection |
 | `--sealed` | Prune build-time editable and virtualenv marker `.pth` files |
 | `--extra` | Repeatable extra selection |

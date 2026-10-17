@@ -451,14 +451,15 @@ class PythonEnvironment:
         if result.returncode:
             raise classify_uv_failure("export", result.returncode, result.stderr or result.stdout)
 
-    def install_requirements(self, requirements: Sequence[str], *, wheelhouse: Path | None = None) -> None:
+    def install_requirements(self, requirements: Sequence[str], *, wheelhouse: Path | None = None,
+                             timeout: int = 1800) -> None:
         if not requirements:
             return
         # A file avoids command-line length limits and shell/marker quoting.
         with tempfile.TemporaryDirectory(prefix="pm-requirements-") as temporary:
             requirements_file = Path(temporary) / "requirements.txt"
             requirements_file.write_text("\n".join(requirements) + "\n", encoding="utf-8")
-            self._install_requirements_file(requirements_file, wheelhouse=wheelhouse)
+            self._install_requirements_file(requirements_file, wheelhouse=wheelhouse, timeout=timeout)
 
     def _install_requirements_file(self, requirements: Path, *, wheelhouse: Path | None = None,
                                    timeout: int = 1800) -> None:
