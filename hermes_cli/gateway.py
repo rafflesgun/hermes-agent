@@ -68,6 +68,7 @@ from hermes_cli.setup import (
     prompt_yes_no,
 )
 from hermes_cli.colors import Colors, color
+from hermes_cli.gateway_profile_lifecycle import owned_gateway_pid as _owned_gateway_pid
 logger = logging.getLogger(__name__)
 
 # Shared ``subprocess.run`` kwargs for text-mode probes (stdout/stderr captured, decode-tolerant).
@@ -756,8 +757,7 @@ def find_gateway_pids(exclude_pids: set | None = None, all_profiles: bool = Fals
     pids: list[int] = []
     if not all_profiles:
         try:
-            from gateway.status import get_running_pid
-            _append_unique_pid(pids, get_running_pid(), _exclude)
+            _append_unique_pid(pids, _owned_gateway_pid(), _exclude)
         except Exception:
             pass
     for pid in _get_service_pids(all_profiles=all_profiles):
@@ -1965,16 +1965,7 @@ def _force_kill_survivors(survivors, *, kill=None) -> None:
             kill(pid, getattr(signal, "SIGKILL", signal.SIGTERM))
 
 
-def _mark_planned_stop(pid: int | None = None) -> None:
-    """Best-effort planned-stop marker for ``pid`` (default: the recorded gateway PID)."""
-    try:
-        from gateway.status import get_running_pid, write_planned_stop_marker
-        if pid is None:
-            pid = get_running_pid(cleanup_stale=False)
-        if pid is not None:
-            write_planned_stop_marker(pid)
-    except Exception:
-        pass
+from hermes_cli.gateway_profile_lifecycle import mark_planned_stop as _mark_planned_stop
 
 
 def stop_profile_gateway() -> bool:
@@ -1991,9 +1982,9 @@ def stop_profile_gateway() -> bool:
     except ImportError:
         return False
 
-    pid = get_running_pid()
+    pid = _owned_gateway_pid()
     if pid is None:
-        return _reap_unsupervised_gateway_orphans()
+        return False if get_running_pid() is not None else _reap_unsupervised_gateway_orphans()
 
     if is_windows():
         # Windows maps SIGTERM to TerminateProcess. The marker watcher is the
@@ -4648,11 +4639,11 @@ from hermes_cli.gateway_setup_wizard import (
     _all_platforms,
     _platform_status,
     _set_platform_unauthorized_dm_behavior,
-    _print_setup_header,
-    _confirm_reconfigure,
-    _offer_home_channel,
-    _save_env_values,
-    _prompt_csv,
+    print_setup_header,
+    confirm_reconfigure,
+    offer_home_channel,
+    save_env_values,
+    prompt_csv,
     _UNAUTHORIZED_ACCESS_CHOICES,
     _prompt_unauthorized_access,
     _telegram_auto_setup,
@@ -5311,7 +5302,7 @@ def _cmd_start(args):
 
 def _cmd_stop(args):
     _refuse_from_inside_gateway("stop", "restart loops")
-    from hermes_cli.gateway_profile_lifecycle import host_scope_for_all_verb, profile_lifecycle
+    from hermes_cli.gateway_profile_lifecycle import host_scope_for_all_verb, profile_lifecycle, report_profile_stop_failure
     if profile_lifecycle("stop", args):
         return
     stop_all = getattr(args, "all", False)
@@ -5354,7 +5345,7 @@ def _cmd_stop(args):
     elif stop_profile_gateway():
         print("✓ Stopped gateway for this profile")
     else:
-        print("✗ No gateway running for this profile")
+        report_profile_stop_failure()
 
 
 def _stop_host_multiplexer(owner) -> int:
@@ -5446,12 +5437,11 @@ def _refuse_restart_of_service_managed_gateway(pid: int | None) -> None:
         return
     from hermes_cli import main_dashboard as _dash
 
-    unit = _dash._get_systemd_service_for_pid(pid)
-    if unit is None:
+    owner = _dash._systemd_owner_for_pid(pid)
+    if owner is None:
         return
-    scope = _dash._extract_scope_from_cgroup(_dash._get_pid_cgroup_path(pid) or "")
-    user_cmd, system_cmd = f"systemctl --user restart {unit}", f"sudo systemctl restart {unit}"
-    cmds = {"user": [user_cmd], "system": [system_cmd]}.get(scope, [user_cmd, system_cmd])
+    unit, scope = owner
+    cmds = _dash._systemd_restart_commands(unit, scope)
     _print_lines(
         "",
         f"✗ Gateway (PID {pid}) is managed by systemd unit {unit}.",
