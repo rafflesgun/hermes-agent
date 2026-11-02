@@ -50,6 +50,9 @@ export type Locale = string
 export interface ErrorCardCopy {
   title: string | ((provider: string, model: string) => string)
   body: string | ((provider: string, model: string) => string)
+  /** Body when the failure says a retry will not help (`retryable: false`), for a code whose body
+   *  otherwise tells the user to retry. */
+  bodyNoRetry?: string | ((provider: string, model: string) => string)
 }
 
 export type ToolTitleKey =
@@ -633,8 +636,6 @@ export interface Translations extends NoticeTranslations {
       openFolder: string
       rescan: string
       reveal: string
-      enable: string
-      disable: string
       failed: string
       kinds: { bundled: string; disk: string; runtime: string }
       installModal: {
@@ -1895,6 +1896,10 @@ export interface Translations extends NoticeTranslations {
     edit: string
     archive: string
     skillArchivedTitle: string
+    lock: string
+    locked: string
+    lockHint: string
+    unlockedHint: string
     skillArchivedMessage: string
     tabPlugins: string
     plugins: PluginUpdateTranslations &
@@ -2461,9 +2466,6 @@ export interface Translations extends NoticeTranslations {
       deleteOn: (gateway: string) => string
       /** At-rest local default pill: device, not Home, and the click's consequence. */
       localDevice: string
-      switchDeviceTitle: string
-      switchDeviceDesc: string
-      switchDeviceConfirm: string
       installDeviceTitle: string
       installDeviceDesc: string
       installDeviceConfirm: string
@@ -2854,7 +2856,6 @@ export interface Translations extends NoticeTranslations {
       backgroundRunning: string
       draftSession: string
       handoffOrigin: (platform: string) => string
-      continuationOrigin: string
       ownedByProfile: (profile: string) => string
       renamed: string
       renameFailed: string
